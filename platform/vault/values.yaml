@@ -1,0 +1,60 @@
+global:
+  enabled: true
+  tlsDisable: true
+
+injector:
+  enabled: true
+  replicas: 1
+
+server:
+  dev:
+    enabled: false
+
+  dataStorage:
+    enabled: true
+    size: 1Gi
+
+  auditStorage:
+    enabled: true
+    size: 1Gi
+
+  ha:
+    enabled: true
+    replicas: 1
+    raft:
+      enabled: true
+      setNodeId: true
+      config: |
+        ui = true
+
+        listener "tcp" {
+          tls_disable = 1
+          address = "[::]:8200"
+          cluster_address = "[::]:8201"
+        }
+
+        storage "raft" {
+          path = "/vault/data"
+        }
+
+        service_registration "kubernetes" {}
+
+  readinessProbe:
+    enabled: true
+    path: "/v1/sys/health?standbyok=true&sealedcode=204&uninitcode=204"
+
+  livenessProbe:
+    enabled: true
+    path: "/v1/sys/health?standbyok=true"
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+ui:
+  enabled: true
+  serviceType: ClusterIP
+

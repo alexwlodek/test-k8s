@@ -1,3 +1,9 @@
 repoURL: https://github.com/alexwlodek/test-k8s.git
 targetRevision: main
 destinationServer: https://kubernetes.default.svc
+
+vault:
+  chartVersion: 0.32.0
+
+externalSecrets:
+  chartVersion: 2.3.0

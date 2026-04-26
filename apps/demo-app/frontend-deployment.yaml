@@ -21,6 +21,7 @@ spec:
         app.kubernetes.io/part-of: istio-demo
         app.kubernetes.io/version: v1
     spec:
+      serviceAccountName: frontend
       containers:
         - name: frontend
           image: registry.k8s.io/e2e-test-images/agnhost:2.53

@@ -304,9 +304,20 @@ wait_for_application_sync() {
 
 wait_for_demo() {
   wait_for_application_sync root 300
+  wait_for_application_sync vault 300
+  wait_for_application_sync vault-kubernetes-auth-rbac 300
+  wait_for_application_sync external-secrets 300
   wait_for_application_sync kyverno-policies 300
   wait_for_application_sync demo-app 300
+  wait_for_application_sync vault-demo-secrets 300
   wait_for_application_sync istio-demo 300
+
+  log "Waiting for secret platform workloads"
+  kubectl -n vault rollout status statefulset/vault --timeout=300s
+  kubectl -n vault rollout status deployment/vault-agent-injector --timeout=300s
+  kubectl -n external-secrets rollout status deployment/external-secrets --timeout=300s
+  kubectl -n external-secrets rollout status deployment/external-secrets-webhook --timeout=300s
+  kubectl -n external-secrets rollout status deployment/external-secrets-cert-controller --timeout=300s
 
   log "Waiting for demo workloads"
   kubectl -n demo rollout status deployment/frontend --timeout=300s
@@ -333,6 +344,12 @@ Argo CD:
   kubectl -n argocd port-forward svc/argocd-server 8081:80
   kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; echo
   Open http://localhost:8081 and log in as admin.
+
+Vault:
+  ./scripts/vault-init.sh
+  ./scripts/vault-unseal.sh <unseal-key>
+  VAULT_TOKEN=<root-token> ./scripts/vault-configure-demo-secrets.sh
+  kubectl -n demo get secret demo-config
 
 Destroy:
   ./scripts/destroy.sh

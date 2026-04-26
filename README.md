@@ -6,6 +6,8 @@ This repository builds a complete local Kubernetes demo platform on kind with:
 - Istio base, istiod, and istio-ingressgateway
 - Kyverno
 - Argo CD
+- HashiCorp Vault
+- External Secrets Operator
 - An Argo CD app-of-apps root application
 - A demo frontend/backend app with Istio traffic splitting
 
@@ -123,9 +125,78 @@ kubectl get nodes
 kubectl get pods -A
 kubectl get applications -n argocd
 kubectl get pods -n demo
+kubectl get pods -n vault
+kubectl get pods -n external-secrets
 kubectl get gateway,virtualservice,destinationrule -n demo
 curl -H "Host: demo.localhost" http://localhost:8080/
 ```
+
+## Learn Vault Secrets
+
+This repository installs Vault through Argo CD, but it does not initialize or unseal Vault for you. That is intentional: `init`, unseal keys, root tokens, policies, auth methods, and secret engines are core Vault operator concepts.
+
+The local lab uses:
+
+- Vault Helm chart in HA/Raft mode with one replica for kind
+- manual `vault operator init`
+- manual `vault operator unseal`
+- `kv-v2` mounted at `secret/`
+- Kubernetes auth for External Secrets Operator
+- an `ExternalSecret` that syncs `secret/demo/config` from Vault into a Kubernetes Secret named `demo-config` in the `demo` namespace
+
+Initialize Vault:
+
+```bash
+./scripts/vault-init.sh
+```
+
+The command prints one unseal key and one root token for this local lab. Store them outside Git.
+
+Unseal Vault:
+
+```bash
+./scripts/vault-unseal.sh <unseal-key>
+```
+
+Configure the first learning path: `kv-v2`, a read-only policy, Kubernetes auth, the ESO Vault role, and a demo secret:
+
+```bash
+VAULT_TOKEN=<root-token> ./scripts/vault-configure-demo-secrets.sh
+```
+
+Check that External Secrets Operator synced the Vault value to Kubernetes:
+
+```bash
+kubectl -n demo get externalsecret demo-config
+kubectl -n demo get secret demo-config \
+  -o jsonpath='{.data.message}' | base64 -d; echo
+```
+
+Rotate the demo value in Vault and watch it sync again:
+
+```bash
+VAULT_TOKEN=<root-token> \
+DEMO_SECRET_MESSAGE="rotated from Vault" \
+  ./scripts/vault-configure-demo-secrets.sh
+
+kubectl -n demo get secret demo-config \
+  -o jsonpath='{.data.message}' | base64 -d; echo
+```
+
+Useful Vault checks:
+
+```bash
+./scripts/vault-status.sh
+kubectl -n vault port-forward svc/vault-ui 8200:8200
+```
+
+Then open:
+
+```text
+http://localhost:8200
+```
+
+For production, do not use one unseal key, do not use the root token for daily work, enable TLS, enable audit logging, back up Raft snapshots, and use auto-unseal with a cloud KMS or HSM.
 
 ## Verify Istio Sidecar Injection
 
@@ -178,17 +249,24 @@ scripts/
   bootstrap.sh
   check-tools.sh
   destroy.sh
+  vault-init.sh
+  vault-unseal.sh
+  vault-configure-demo-secrets.sh
+  vault-status.sh
 platform/
   ingress-nginx/
   istio/
   kyverno/
   argocd/
+  vault/
+  external-secrets/
 apps/
   root-app/
   demo-app/
 manifests/
   namespaces/
   istio-demo/
+  vault-demo-secrets/
 examples/
   kyverno-invalid/
 ```
@@ -211,6 +289,14 @@ If Argo CD Applications stay `OutOfSync` or `Unknown`, inspect:
 kubectl get applications -n argocd
 kubectl describe application root -n argocd
 kubectl logs -n argocd deploy/argocd-repo-server
+```
+
+If `vault-demo-secrets` is synced but `demo-config` is missing, Vault probably has not been initialized, unsealed, or configured yet. Run:
+
+```bash
+./scripts/vault-status.sh
+kubectl -n demo describe externalsecret demo-config
+kubectl describe clustersecretstore vault
 ```
 
 If you are using `USE_LOCAL_GIT_MIRROR=true` and the local Git mirror needs to be refreshed after edits, rerun:

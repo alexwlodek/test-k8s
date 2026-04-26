@@ -1,0 +1,59 @@
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: demo-strict-mtls
+  namespace: demo
+  labels:
+    app.kubernetes.io/name: demo-strict-mtls
+    app.kubernetes.io/part-of: istio-demo
+spec:
+  mtls:
+    mode: STRICT
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: frontend-ingress-only
+  namespace: demo
+  labels:
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/part-of: istio-demo
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: frontend
+      app.kubernetes.io/component: frontend
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/istio-system/sa/istio-ingressgateway
+      to:
+        - operation:
+            ports:
+              - "8080"
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: backend-frontend-only
+  namespace: demo
+  labels:
+    app.kubernetes.io/name: backend
+    app.kubernetes.io/part-of: istio-demo
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: backend
+      app.kubernetes.io/component: backend
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/demo/sa/frontend
+      to:
+        - operation:
+            ports:
+              - "8080"

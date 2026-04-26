@@ -5,6 +5,7 @@ metadata:
   namespace: demo
   labels:
     app.kubernetes.io/part-of: istio-demo
+    app.kubernetes.io/name: frontend
 spec:
   containers:
     - name: pause
