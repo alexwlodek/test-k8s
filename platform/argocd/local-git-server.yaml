@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-local-git
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-local-git
+    app.kubernetes.io/part-of: local-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-local-git
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: argocd-local-git
+        app.kubernetes.io/part-of: local-platform
+    spec:
+      volumes:
+        - name: repo-bundle
+          configMap:
+            name: argocd-local-repo
+        - name: repo-data
+          emptyDir: {}
+      initContainers:
+        - name: seed-repo
+          image: __ARGOCD_IMAGE__
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -ec
+          args:
+            - |
+              rm -rf /work/source /srv/git/repo.git
+              mkdir -p /work/source /srv/git
+              tar -xzf /repo/repo.tar.gz -C /work/source
+              git -C /work/source init -b main
+              git -C /work/source config user.email local-platform@example.invalid
+              git -C /work/source config user.name "Local Platform Bootstrap"
+              git -C /work/source add .
+              git -C /work/source commit -m "Seed local platform repository"
+              git init --bare /srv/git/repo.git
+              git -C /work/source remote add origin /srv/git/repo.git
+              git -C /work/source push origin main
+              touch /srv/git/repo.git/git-daemon-export-ok
+          volumeMounts:
+            - name: repo-bundle
+              mountPath: /repo
+              readOnly: true
+            - name: repo-data
+              mountPath: /srv/git
+      containers:
+        - name: git-daemon
+          image: __ARGOCD_IMAGE__
+          imagePullPolicy: IfNotPresent
+          command:
+            - git
+          args:
+            - daemon
+            - --verbose
+            - --export-all
+            - --base-path=/srv/git
+            - --listen=0.0.0.0
+            - /srv/git
+          ports:
+            - name: git
+              containerPort: 9418
+              protocol: TCP
+          readinessProbe:
+            tcpSocket:
+              port: git
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: git
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          volumeMounts:
+            - name: repo-data
+              mountPath: /srv/git
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: argocd-local-git
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-local-git
+    app.kubernetes.io/part-of: local-platform
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: argocd-local-git
+  ports:
+    - name: git
+      port: 9418
+      targetPort: git
+      protocol: TCP

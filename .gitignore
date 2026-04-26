@@ -1,0 +1,5 @@
+.argocd-source/
+.codex
+.DS_Store
+*.log
+tmp/

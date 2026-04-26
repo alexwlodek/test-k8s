@@ -1,0 +1,20 @@
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: demo-gateway
+  namespace: demo
+  labels:
+    app.kubernetes.io/name: demo-gateway
+    app.kubernetes.io/part-of: istio-demo
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - demo.localhost
+        - demo.local
+

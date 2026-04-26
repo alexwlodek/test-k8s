@@ -1,0 +1,30 @@
+replicaCount: 1
+autoscaling:
+  enabled: false
+labels:
+  istio: ingressgateway
+service:
+  type: NodePort
+  ports:
+    - name: status-port
+      port: 15021
+      protocol: TCP
+      targetPort: 15021
+      nodePort: 31521
+    - name: http2
+      port: 80
+      protocol: TCP
+      targetPort: 8080
+      nodePort: 80
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: 8443
+      nodePort: 443
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 256Mi
+

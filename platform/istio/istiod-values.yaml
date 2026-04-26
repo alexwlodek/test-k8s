@@ -1,0 +1,6 @@
+pilot:
+  autoscaleEnabled: false
+  replicaCount: 1
+meshConfig:
+  accessLogFile: /dev/stdout
+

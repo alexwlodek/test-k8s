@@ -1,0 +1,13 @@
+controller:
+  replicaCount: 1
+  ingressClassResource:
+    name: nginx
+    enabled: true
+    default: false
+  service:
+    type: ClusterIP
+  admissionWebhooks:
+    enabled: true
+  metrics:
+    enabled: false
+

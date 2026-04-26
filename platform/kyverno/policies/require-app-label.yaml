@@ -1,0 +1,28 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-demo-pod-app-name
+  labels:
+    app.kubernetes.io/name: require-demo-pod-app-name
+    app.kubernetes.io/part-of: local-platform
+spec:
+  background: true
+  rules:
+    - name: require-app-kubernetes-io-name
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - demo
+              operations:
+                - CREATE
+                - UPDATE
+      validate:
+        failureAction: Enforce
+        message: Pods in the demo namespace must set app.kubernetes.io/name.
+        pattern:
+          metadata:
+            labels:
+              app.kubernetes.io/name: "?*"

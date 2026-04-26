@@ -1,0 +1,3 @@
+repoURL: https://github.com/alexwlodek/test-k8s.git
+targetRevision: main
+destinationServer: https://kubernetes.default.svc
