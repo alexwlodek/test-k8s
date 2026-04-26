@@ -155,7 +155,7 @@ for i in {1..30}; do
 done | sort | uniq -c
 ```
 
-You should see mostly `backend version: v1` and some `backend version: v2`.
+The frontend returns a small JSON response from `agnhost` showing the backend response it received. You should see mostly `backend version: v1` and some `backend version: v2`.
 
 ## Test Kyverno
 

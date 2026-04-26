@@ -24,24 +24,24 @@ spec:
         app.kubernetes.io/version: v1
     spec:
       containers:
-        - name: http-echo
-          image: hashicorp/http-echo:1.0
+        - name: backend
+          image: registry.k8s.io/e2e-test-images/agnhost:2.53
           imagePullPolicy: IfNotPresent
           args:
-            - "-listen=:8080"
-            - "-text=backend version: v1"
+            - netexec
+            - --http-port=8080
+            - --udp-port=-1
+            - "--http-override=/echo?msg=backend%20version:%20v1"
           ports:
             - name: http
               containerPort: 8080
           readinessProbe:
-            httpGet:
-              path: /
+            tcpSocket:
               port: http
             initialDelaySeconds: 2
             periodSeconds: 5
           livenessProbe:
-            httpGet:
-              path: /
+            tcpSocket:
               port: http
             initialDelaySeconds: 10
             periodSeconds: 10
@@ -51,6 +51,8 @@ spec:
               drop:
                 - ALL
             readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
           resources:
             requests:
               cpu: 10m

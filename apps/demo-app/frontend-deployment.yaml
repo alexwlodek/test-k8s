@@ -22,21 +22,24 @@ spec:
         app.kubernetes.io/version: v1
     spec:
       containers:
-        - name: nginx
-          image: nginxinc/nginx-unprivileged:1.27-alpine
+        - name: frontend
+          image: registry.k8s.io/e2e-test-images/agnhost:2.53
           imagePullPolicy: IfNotPresent
+          args:
+            - netexec
+            - --http-port=8080
+            - --udp-port=-1
+            - "--http-override=/dial?host=backend.demo.svc.cluster.local&port=8080&request=/&tries=1"
           ports:
             - name: http
               containerPort: 8080
           readinessProbe:
-            httpGet:
-              path: /healthz
+            tcpSocket:
               port: http
             initialDelaySeconds: 3
             periodSeconds: 5
           livenessProbe:
-            httpGet:
-              path: /healthz
+            tcpSocket:
               port: http
             initialDelaySeconds: 10
             periodSeconds: 10
@@ -47,32 +50,10 @@ spec:
                 - ALL
             readOnlyRootFilesystem: true
             runAsNonRoot: true
-            runAsUser: 101
+            runAsUser: 65532
           resources:
             requests:
               cpu: 20m
               memory: 64Mi
             limits:
               memory: 128Mi
-          volumeMounts:
-            - name: nginx-config
-              mountPath: /etc/nginx/conf.d/default.conf
-              subPath: default.conf
-              readOnly: true
-            - name: nginx-cache
-              mountPath: /var/cache/nginx
-            - name: nginx-run
-              mountPath: /var/run
-            - name: tmp
-              mountPath: /tmp
-      volumes:
-        - name: nginx-config
-          configMap:
-            name: frontend-nginx
-        - name: nginx-cache
-          emptyDir: {}
-        - name: nginx-run
-          emptyDir: {}
-        - name: tmp
-          emptyDir: {}
-
